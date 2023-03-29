@@ -15,6 +15,8 @@ from sklearn.metrics import median_absolute_error
 from sklearn.metrics import mean_squared_log_error
 import statsmodels as sm
 import os
+from sklearn.ensemble import RandomForestClassifier
+
 
 script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
 excel_file = "weekly_prepared_26_11_2017.xlsx"
@@ -24,27 +26,13 @@ df = pd.read_excel(excel_file, sheet_name='JTI_weekly_prepared_26_11_2017')
 # set week + id as the time series index
 df = df.assign(weekid=df['week']*1000000000000+df['id'])
 df.set_index('weekid', inplace=True)
-X= df[['mileage','avg_speed','drg1_100','side1_100','avg_daily_business_mileage','acc1_100','speed3_100']]
-Xtempt = ['mileage','avg_speed','drg1_100','side1_100','avg_daily_business_mileage','acc1_100','speed3_100']
+X= df[['mileage','speed3_100','acc1_100','acc2_100','acc3_100','drg1_100','drg2_100','drg3_100','side1_100','side2_100','side3_100','avg_daily_business_mileage','cor_avg_daily_morning_jam_mileage','cor_avg_daily_night_mileage','avg_speed','max_evening_jam_speed','max_morning_jam_speed','max_night_speed','max_speed','crash']]
+column_titles = df.columns.values
 Y= df['crash']
+num_cols = len(X.columns)
+X = X.values.reshape(-1, num_cols)
 
-# # Backward Elimination
-import statsmodels.api as sm
-import operator
-def backward_elimination(X, Y):
-    numVars = len(X[0])
-    for i in range(0, (numVars-1)):
-        regressor_OLS = sm.OLS(Y, X).fit()
-        maxVar = max(regressor_OLS.pvalues)
-        if maxVar > 0.05:
-            for j in range(0, numVars - i):
-                if (regressor_OLS.pvalues[j] == maxVar):
-                    X = np.delete(X, j, 1)
-    return X
-
-X = X.values.reshape(-1, 7)
-
-# # test ssz
+# # test stationarity
 # from statsmodels.tsa.stattools import adfuller
 # def test_stationarity(timeseries):
 #     #Determing rolling statistics
@@ -94,11 +82,23 @@ rf=RandomForestRegressor(n_estimators=100, max_features=2, max_depth=10, min_sam
 # Fit the model to the training data
 rf.fit(X_train, Y_train)
 
+# Evaluate the model on the test data
+
+rfc = RandomForestClassifier(n_estimators=100, bootstrap=True, oob_score=True)
+rfc.fit(X_train, Y_train)
+test_score = rfc.score(X_test, Y_test)
+
+# Print the OOB score and test score
+print('OOB score:', rfc.oob_score_)
+print('Test score:', test_score)
+
 # Predict on the test set and calculate the mean squared error
 Y_pred = rf.predict(X_test)
 mse = ((Y_pred - Y_test) ** 2).mean()
 print('MSE before BE = ')
 print(mse)
+
+
 
 # # Backward Elimination
 import statsmodels.api as sm
@@ -114,7 +114,16 @@ def backward_elimination(X, Y):
                     X = np.delete(X, j, 1)
     return X
 
-X_Modeled = backward_elimination(X, Y)
+X = backward_elimination(X, Y)
+num_cols = len(X[0])
+
+
+# Split the data into training and test sets
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=0)
+
+
+# Create a random forest regressor with 100 trees and set some controls
+rf=RandomForestRegressor(n_estimators=100, max_features=2, max_depth=10, min_samples_split=2, min_samples_leaf=1, bootstrap=True, oob_score=False, n_jobs=1, random_state=0, verbose=0)
 
 
 # Fit the model to the training data
@@ -123,10 +132,16 @@ rf.fit(X_train, Y_train)
 # Predict on the test set and calculate the mean squared error
 Y_pred = rf.predict(X_test)
 mse2 = ((Y_pred - Y_test) ** 2).mean()
-
-# Print the mean squared error 
 print('MSE after BE = ')
 print(mse2)
+
+rfc = RandomForestClassifier(n_estimators=100, bootstrap=True, oob_score=True)
+rfc.fit(X_train, Y_train)
+test_score = rfc.score(X_test, Y_test)
+
+# Print the OOB score and test score
+print('OOB score before backwords elimination:', rfc.oob_score_)
+print('Test score:', test_score)
 
 # Print the coefficient of determination (OOB) of the prediction
 from sklearn.ensemble import RandomForestClassifier
@@ -140,7 +155,7 @@ print("Feature ranking:")
 importances = rf.feature_importances_
 indices = np.argsort(importances)[::-1]
 for f in range(X.shape[1]):
-    print("%d. feature %s (%f)" % (f + 1, Xtempt[indices[f]], importances[indices[f]]))
+    print("%d. feature %s (%f)" % (f + 1, column_titles[indices[f]], importances[indices[f]]))
 
 # Plot the feature importances of the forest
 plt.figure()
