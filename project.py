@@ -14,8 +14,12 @@ from sklearn.metrics import explained_variance_score
 from sklearn.metrics import median_absolute_error
 from sklearn.metrics import mean_squared_log_error
 import statsmodels as sm
+import os
 
-df = pd.read_excel('weekly_prepared_26_11_2017.xlsx', sheet_name='JTI_weekly_prepared_26_11_2017')
+script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
+excel_file = "weekly_prepared_26_11_2017.xlsx"
+os.chdir(script_dir)
+df = pd.read_excel(excel_file, sheet_name='JTI_weekly_prepared_26_11_2017')
 
 # set week + id as the time series index
 df = df.assign(weekid=df['week']*1000000000000+df['id'])
@@ -40,50 +44,44 @@ def backward_elimination(X, Y):
 
 X = X.values.reshape(-1, 7)
 
+# # test ssz
+# from statsmodels.tsa.stattools import adfuller
+# def test_stationarity(timeseries):
+#     #Determing rolling statistics
+#     rolmean = df.rolling(window=3).mean(timeseries)
+#     rolstd = df.rolling(window= 3).std(timeseries)
 
+#     #Plot rolling statistics:
+#     orig = plt.plot(timeseries, color='blue',label='Original')
+#     mean = plt.plot(rolmean, color='red', label='Rolling Mean')
+#     std = plt.plot(rolstd, color='black', label = 'Rolling Std')
+#     plt.legend(loc='best')
+#     plt.title('Rolling Mean & Standard Deviation')
+#     plt.show(block=False)
 
+#     #Perform Dickey-Fuller test:
+#     print('Results of Dickey-Fuller Test:')
+#     dftest = adfuller(timeseries, autolag='AIC')
+#     dfoutput = pd.Series(dftest[0:4], index=['Test Statistic','p-value','#Lags Used','Number of Observations Used'])
+#     print(dftest)
+#     for key,value in dftest.items():
+#         dfoutput['Critical Value (%s)'%key] = value
+#     print(dfoutput) 
 
+# # first difference
+# df['crash'] = df['crash'] - df['crash'].shift(1)
+# df = df.dropna()
+# test_stationarity(df['crash'])
 
+# # second difference
+# df['crash'] = df['crash'] - df['crash'].shift(1)
+# df = df.dropna()
+# test_stationarity(df['crash'])
 
-
-# test ssz
-from statsmodels.tsa.stattools import adfuller
-def test_stationarity(timeseries):
-    #Determing rolling statistics
-    rolmean = df.rolling(window=3).mean(timeseries)
-    rolstd = df.rolling(window= 3).std(timeseries)
-
-    #Plot rolling statistics:
-    orig = plt.plot(timeseries, color='blue',label='Original')
-    mean = plt.plot(rolmean, color='red', label='Rolling Mean')
-    std = plt.plot(rolstd, color='black', label = 'Rolling Std')
-    plt.legend(loc='best')
-    plt.title('Rolling Mean & Standard Deviation')
-    plt.show(block=False)
-
-    #Perform Dickey-Fuller test:
-    print('Results of Dickey-Fuller Test:')
-    dftest = adfuller(timeseries, autolag='AIC')
-    dfoutput = pd.Series(dftest[0:4], index=['Test Statistic','p-value','#Lags Used','Number of Observations Used'])
-    print(dftest)
-    for key,value in dftest.items():
-        dfoutput['Critical Value (%s)'%key] = value
-    print(dfoutput) 
-
-# first difference
-df['crash'] = df['crash'] - df['crash'].shift(1)
-df = df.dropna()
-test_stationarity(df['crash'])
-
-# second difference
-df['crash'] = df['crash'] - df['crash'].shift(1)
-df = df.dropna()
-test_stationarity(df['crash'])
-
-# third difference
-df['crash'] = df['crash'] - df['crash'].shift(1)
-df = df.dropna()
-test_stationarity(df['crash'])
+# # third difference
+# df['crash'] = df['crash'] - df['crash'].shift(1)
+# df = df.dropna()
+# test_stationarity(df['crash'])
 
 
 # Split the data into training and test sets
